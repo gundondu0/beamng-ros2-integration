@@ -6,7 +6,7 @@ are provided in the ``/config/scenarios/`` directory.
 from typing import Any, Callable, Dict, List, Tuple
 
 from beamng_ros2.publishers import SensorPublisher, StatePublisher
-from beamngpy import BeamNGpy, Scenario, Vehicle
+from beamngpy import BeamNGpy, Scenario, Vehicle, StaticObject
 
 
 def decode_sensors(sensors_spec: List[Dict[str, Any]]) -> List[SensorPublisher]:
@@ -17,6 +17,29 @@ def decode_sensors(sensors_spec: List[Dict[str, Any]]) -> List[SensorPublisher]:
         )
     return sensor_list
 
+def decode_objects(objects_spec: List[Dict[str, Any]]) -> List[StaticObject]:
+    obj_list: List[StaticObject] = []
+    for o_spec in objects_spec:
+        o_spec = dict(o_spec)
+        obj_list.append(
+            StaticObject(
+                name=o_spec["name"],
+                pos=tuple(o_spec["pos"]),
+                scale=(
+                    float(o_spec.get("scale", (1.0, 1.0, 1.0))[0]),
+                    float(o_spec.get("scale", (1.0, 1.0, 1.0))[1]),
+                    float(o_spec.get("scale", (1.0, 1.0, 1.0))[2]),
+                ),
+                shape=o_spec["shape"],
+                rot_quat=(
+                    float(o_spec.get("rot", (0.0, 0.0, 0.0, 1.0))[0]),
+                    float(o_spec.get("rot", (0.0, 0.0, 0.0, 1.0))[1]),
+                    float(o_spec.get("rot", (0.0, 0.0, 0.0, 1.0))[2]),
+                    float(o_spec.get("rot", (0.0, 0.0, 0.0, 1.0))[3]),
+                ),
+            )
+        )
+    return obj_list
 
 def decode_scenario(
     scenario_spec: Dict[str, Any]
@@ -71,6 +94,9 @@ def decode_scenario(
         if v_spec.get("cosimulation") is not None:
             vehicle_extra_data[-1]["cosimulation"] = v_spec["cosimulation"]
         scenario.add_vehicle(vehicle, pos=v_spec["pos"], rot_quat=v_spec["rot"])
+
+    for obj in decode_objects(scenario_spec.get("objects", [])):
+        scenario.add_object(obj)
 
     on_scenario_start: List[Callable[[BeamNGpy], None]] = []
     wp_key = "weather_presets"
