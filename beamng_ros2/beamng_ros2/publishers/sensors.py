@@ -516,10 +516,10 @@ class LidarPublisher(AutoSensorPublisher):
     def get_data(self, time: Time) -> sensor_msgs.PointCloud2:
         self.sensor = cast(sensors.Lidar, self.sensor)
         data = self.sensor.poll()
-        if isinstance(data["colours"], list):
-            data["colours"] = np.array(data["colours"], dtype=np.uint8).reshape(-1, 3)
-        points = cast(np.ndarray, data["pointCloud"])
-        colours = cast(np.ndarray, data["colours"])
+
+        points = np.asarray(data["pointCloud"], dtype=np.float32).reshape(-1, 3)
+        colours = np.asarray(data["colours"], dtype=np.uint8).reshape(-1, 3)
+        
         colours = colours[:, [2, 1, 0]]  # RGB -> BGR
         colours = np.hstack(
             (colours, np.full((colours.shape[0], 1), 255, dtype=np.uint8))
