@@ -510,7 +510,7 @@ class LidarPublisher(AutoSensorPublisher):
     def create_publisher(self, node: Node):
         super().create_publisher(node)
         self.tf_listener = TransformListener(
-            self.tf_buffer, self._node, spin_thread=True
+            self.tf_buffer, self._node, spin_thread=False
         )
 
     def get_data(self, time: Time) -> sensor_msgs.PointCloud2:
