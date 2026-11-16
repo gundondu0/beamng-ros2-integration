@@ -24,6 +24,26 @@ uint32_t image_step_bytes(const std::string& encoding, uint32_t width) {
     return width * 3u;
 }
 
+uint32_t trim_trailing_zero_points(const uint8_t* data, uint32_t len, uint32_t stride) {
+    if (!data || stride < 12u) return len;
+
+    uint32_t point_count = len / stride;
+    while (point_count > 0) {
+        const uint8_t* point = data + static_cast<std::size_t>(point_count - 1u) * stride;
+        bool is_zero = true;
+        for (uint32_t offset = 0; offset < 12u; ++offset) {
+            if (point[offset] != 0u) {
+                is_zero = false;
+                break;
+            }
+        }
+        if (!is_zero) break;
+        --point_count;
+    }
+
+    return point_count * stride;
+}
+
 }
 
 BlobPublishFn make_image(rclcpp::Node& node, const std::string& topic, const SensorEntry& sensor, uint32_t width, uint32_t height, const std::string& encoding) {
@@ -69,11 +89,12 @@ BlobPublishFn make_pointcloud2(rclcpp::Node& node, const std::string& topic, con
     }
 
     return [pub, msg = std::move(pointcloud_template), stride](const uint8_t* data, uint32_t len, const rclcpp::Time& stamp) mutable {
+        const uint32_t payload_len = trim_trailing_zero_points(data, len, stride);
         msg.header.stamp = stamp;
-        msg.width = (stride > 0) ? (len / stride) : 0;
-        msg.row_step = len;
-        if (msg.data.size() != len) msg.data.resize(len);
-        if (len > 0) std::memcpy(msg.data.data(), data, len);
+        msg.width = (stride > 0) ? (payload_len / stride) : 0;
+        msg.row_step = payload_len;
+        if (msg.data.size() != payload_len) msg.data.resize(payload_len);
+        if (payload_len > 0) std::memcpy(msg.data.data(), data, payload_len);
 
         pub->publish(msg);
     };
